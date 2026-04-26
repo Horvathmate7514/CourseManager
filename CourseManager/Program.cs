@@ -8,7 +8,7 @@ namespace CourseManager
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +45,20 @@ namespace CourseManager
             builder.Services.AddScoped<INotificationService, NotificationService>();
 
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                try
+                {
+                    var context = services.GetRequiredService<CourseManager.DataContext.Context.NeptunDbContext>();
+                    await DataContext.Context.Seeders.DataSeeder.SeedAsync(context);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Hiba történt az adatbázis feltöltésekor: " + ex.Message);
+                }
+            }
 
             if (app.Environment.IsDevelopment())
             {
