@@ -4,7 +4,7 @@ using CourseManager.DataContext.Dtos;
 using CourseManager.DataContext.Entities;
 using CourseManager.DataContext.Enums;
 using CourseManager.Services.Dtos;
-using Microsoft.EntityFrameworkCore; // Ez KELL az Include és az Async metódusokhoz!
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +22,6 @@ namespace CourseManager.Services
 
 
         Task<List<UserDto>> GetStudentsAsync(int courseId);
-
 
         Task ChangeCourseAsync(CourseChangeDto dto);
 
@@ -101,8 +100,13 @@ namespace CourseManager.Services
 
         public async Task DeleteCourseAsync(int id)
         {
-            var course = await _context.Courses.FindAsync(id);
+            var course = await _context.Courses
+                .Include(c => c.Students)
+                .FirstOrDefaultAsync(c => c.Id == id);
             if (course == null) throw new Exception("Kurzus nem található!");
+            if (course.Students.Any()) throw new Exception("Nem lehet törölni a kurzust, amíg vannak hallgatók felvéve rá!");
+
+            _context.Courses.Remove(course);
             await _context.SaveChangesAsync();
         }
 
@@ -115,6 +119,8 @@ namespace CourseManager.Services
             if (course == null) throw new Exception("Kurzus nem található!");
             return _mapper.Map<List<UserDto>>(course.Students);
         }
+
+  
 
 
         public async Task ChangeCourseAsync(CourseChangeDto dto)
@@ -158,23 +164,85 @@ namespace CourseManager.Services
             await _context.SaveChangesAsync();
         }
 
+
+    
+
         public async Task AddScheduleAsync(int courseId, ScheduleCreateDto dto)
         {
             var course = await _context.Courses.FindAsync(courseId);
             if (course == null) throw new Exception("Kurzus nem található!");
-            var schedule = _mapper.Map<Schedule>(dto);
-            schedule.CourseId = courseId;
-            _context.Schedules.Add(schedule);
+
+            var schedulesToAdd = new List<Schedule>();
+
+            foreach (var classTime in dto.ClassTimes)
+            {
+                if (classTime.IsWeekly)
+                {
+                    for (int i = 0; i < 14; i++)
+                    {
+                        schedulesToAdd.Add(new Schedule
+                        {
+                            CourseId = courseId,
+                            StartTime = classTime.StartTime.AddDays(i * 7),
+                            EndTime = classTime.EndTime.AddDays(i * 7)
+                        });
+                    }
+                }
+                else
+                {
+                    schedulesToAdd.Add(new Schedule
+                    {
+                        CourseId = courseId,
+                        StartTime = classTime.StartTime,
+                        EndTime = classTime.EndTime
+                    });
+                }
+            }
+
+            _context.Schedules.AddRange(schedulesToAdd);
             await _context.SaveChangesAsync();
         }
 
-
-
         public async Task ModifyScheduleAsync(int courseId, ScheduleModifyDto dto)
         {
-            var schedules = await _context.Schedules.Where(s => s.CourseId == courseId).ToListAsync();
-            if (schedules == null || !schedules.Any()) throw new Exception("Órarend nem található!");
-             _mapper.Map(dto, schedules); 
+            var course = await _context.Courses
+                .Include(c => c.Schedules)
+                .FirstOrDefaultAsync(c => c.Id == courseId);
+
+            if (course == null) throw new Exception("Kurzus nem található!");
+
+            // 1. Töröljük a kurzus eddigi összes órarendi bejegyzését
+            _context.Schedules.RemoveRange(course.Schedules);
+
+          
+            var schedulesToAdd = new List<Schedule>();
+
+            foreach (var classTime in dto.ClassTimes)
+            {
+                if (classTime.IsWeekly)
+                {
+                    for (int i = 0; i < 14; i++)
+                    {
+                        schedulesToAdd.Add(new Schedule
+                        {
+                            CourseId = courseId,
+                            StartTime = classTime.StartTime.AddDays(i * 7),
+                            EndTime = classTime.EndTime.AddDays(i * 7)
+                        });
+                    }
+                }
+                else
+                {
+                    schedulesToAdd.Add(new Schedule
+                    {
+                        CourseId = courseId,
+                        StartTime = classTime.StartTime,
+                        EndTime = classTime.EndTime
+                    });
+                }
+            }
+
+            _context.Schedules.AddRange(schedulesToAdd);
             await _context.SaveChangesAsync();
         }
     }

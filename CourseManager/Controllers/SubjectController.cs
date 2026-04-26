@@ -22,12 +22,12 @@ namespace CourseManager.Controllers
             return Ok(subjects);
         }
 
-        [HttpGet("api/subjects/{id}")]
-        public async Task<IActionResult> GetSubjectById(int id)
+        [HttpGet("api/subjects/{subjectId}")]
+        public async Task<IActionResult> GetSubjectById(int subjectId)
         {
             try
             {
-                var subject = await _subjectService.GetSubjectByIdAsync(id);
+                var subject = await _subjectService.GetSubjectByIdAsync(subjectId);
                 return Ok(subject);
             }
             catch (Exception ex)
@@ -50,12 +50,12 @@ namespace CourseManager.Controllers
             }
         }
 
-        [HttpPut("api/subjects/{id}")]
-        public async Task<IActionResult> UpdateSubject(int id, UpdateSubjectDto dto)
+        [HttpPut("api/subjects/{subjectId}")]
+        public async Task<IActionResult> UpdateSubject(int subjectId, UpdateSubjectDto dto)
         {
             try
             {
-                var subject = await _subjectService.UpdateSubjectAsync(id, dto);
+                var subject = await _subjectService.UpdateSubjectAsync(subjectId, dto);
                 return Ok(subject);
             }
             catch (Exception ex)
@@ -64,12 +64,12 @@ namespace CourseManager.Controllers
             }
         }
 
-        [HttpPost("api/subjects/{id}/deactivate")]
-        public async Task<IActionResult> DeactivateSubject(int id)
+        [HttpPost("api/subjects/{subjectId}/deactivate")]
+        public async Task<IActionResult> DeactivateSubject(int subjectId)
         {
             try
             {
-                await _subjectService.DeactivateSubjectAsync(id);
+                await _subjectService.DeactivateSubjectAsync(subjectId);
                 return NoContent();
             }
             catch (Exception ex)
@@ -78,12 +78,12 @@ namespace CourseManager.Controllers
             }
         }
 
-        [HttpPost("api/subjects/{id}/reactivate")]
-        public async Task<IActionResult> ReactivateSubject(int id)
+        [HttpPost("api/subjects/{subjectId}/reactivate")]
+        public async Task<IActionResult> ReactivateSubject(int subjectId)
         {
             try
             {
-                await _subjectService.ReactivateSubjectAsync(id);
+                await _subjectService.ReactivateSubjectAsync(subjectId);
                 return NoContent();
             }
             catch (Exception ex)
@@ -92,5 +92,50 @@ namespace CourseManager.Controllers
             }
 
         }
+
+        [HttpPost("api/subjects/{subjectId}/unregister")]
+        public async Task<IActionResult> UnRegisterFromSubject(int subjectId, CourseUnregisterDto dto)
+        {
+            try
+            {
+                await _subjectService.UnRegisterFromSubjectAsync(subjectId, dto);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+        [HttpPost("api/subjects/{subjectId}/register")]
+        public async Task<IActionResult> RegisterForCourseAsync(int subjectId, CourseRegisterDto dto)
+        {
+            try
+            {
+                await _subjectService.RegisterForCourseAsync(subjectId, dto);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+        [HttpGet("/api/subjects/{subjectId}/students")]
+        public async Task<IActionResult> GetStudentsForSubject(int subjectId, string semester)
+        {
+            try
+            {
+                var students = await _subjectService.GetStudentsForSubjectAsync(subjectId, semester);
+                return Ok(students);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
+
+
+        }
+
     }
 }
